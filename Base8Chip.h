@@ -38,13 +38,20 @@ private:
 
     //State of keys
     unsigned char key[16];
+    
+    //Extended mode enabled
+    bool is_extended;
 
 public:
     //Key press checker
     bool key_pressed = false;
+    
     //Pixel vector
     unsigned char gfx[64 * 32];
-
+    
+    //Pixel vector for extended mode
+    unsigned char gfx_e[128 * 64];
+    
     //Initialize everything for use
     void init();
 
