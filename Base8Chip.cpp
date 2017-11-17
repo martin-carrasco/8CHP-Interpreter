@@ -9,9 +9,29 @@
 #include <assert.h>
 #include "Base8Chip.h"
 
+unsigned char const chip8_fontset[80] =
+        {
+                0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
+                0x20, 0x60, 0x20, 0x20, 0x70, // 1
+                0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
+                0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
+                0x90, 0x90, 0xF0, 0x10, 0x10, // 4
+                0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
+                0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
+                0xF0, 0x10, 0x20, 0x40, 0x40, // 7
+                0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
+                0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
+                0xF0, 0x90, 0xF0, 0x90, 0x90, // A
+                0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
+                0xF0, 0x80, 0x80, 0x80, 0xF0, // C
+                0xE0, 0x90, 0x90, 0x90, 0xE0, // D
+                0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
+                0xF0, 0x80, 0xF0, 0x80, 0x80  // F
+        };
+
 void Base8Chip::init() {
 
-  //Zeroes everything
+    //inits
     srand(time(NULL));
     drawFlag = true;
     pc = 0x200;
@@ -21,17 +41,11 @@ void Base8Chip::init() {
     sound_timer = 0;
     delay_timer = 0;
 
-    //Clear keys;
+    //Zeroes the memory
     fill(key, key+16, 0);
-    // Clear stack
     fill(stack, stack+16, 0);
-
-    // Clear registers V0-VF
     fill(V, V+16, 0);
-
-    // Clear memory
     fill(memory, memory+4096, 0);
-
     fill(gfx, gfx+(32*64), 0);
 
     //Load fonts
@@ -44,10 +58,10 @@ void Base8Chip::emulateCycle() {
     //Fetch opcode
     opcode = memory[pc] << 8 | memory[pc + 1];
 
-    //Decode opcode based on the opcode table
+    //Decode opcode and exec
     switch (opcode & 0xF000)
     {
-        //Execute the opcodes
+        //Clear CLS
         case 0x0000:
             switch(opcode & 0x000F)
             {
@@ -57,8 +71,8 @@ void Base8Chip::emulateCycle() {
                     pc+=2;
                     break;
                 case 0x000E:
-                    pc=stack[sp];
                     --sp;
+                    pc=stack[sp];
                     pc += 2;
                     break;
             }
@@ -73,18 +87,21 @@ void Base8Chip::emulateCycle() {
             break;
         case 0x3000:
             if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                pc+=4;
+            else
                 pc+=2;
-            pc+=2;
             break;
         case 0x4000:
             if(V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                pc+=4;
+            else
                 pc+=2;
-            pc+=2;
             break;
         case 0x5000:
             if(V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x00F0) >> 4])
+                pc+=4;
+            else
                 pc+=2;
-            pc+=2;
             break;
         case 0x6000:
             V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
@@ -153,8 +170,9 @@ void Base8Chip::emulateCycle() {
             break;
         case 0x9000:
             if(V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
+                pc+=4;
+            else
                 pc+=2;
-            pc+=2;
             break;
         case 0xA000:
             I = opcode & 0x0FFF;
@@ -188,20 +206,22 @@ void Base8Chip::emulateCycle() {
             pc += 2;
             break;
         }
-        case 0xE000: {
-            switch (opcode & 0x00FF) {
+        case 0xE000:
+            switch (opcode & 0x00FF)
+            {
                 case 0x009E:
-                    if (key[V[(opcode & 0x0F00) >> 8]] != 0)
+                    if (key[V[(opcode & 0x0F00) >> 8]] == 1)
+                        pc += 4;
+                    else
                         pc += 2;
-                    pc += 2;
                 case 0x00A1:
                     if (key[V[(opcode & 0x0F00) >> 8]] == 0)
+                        pc += 4;
+                    else
                         pc += 2;
-                    pc += 2;
                     break;
             }
             break;
-        }
         case 0xF000:
             switch(opcode & 0x00FF)
             {
@@ -211,8 +231,8 @@ void Base8Chip::emulateCycle() {
                     break;
                 case 0x000A:
                     for(int i = 0;i < 16;i++){
-                        if(key[i] == 0) {
-                            V[(opcode & 0x0F00) >> 8] = (unsigned char) i;
+                        if(key[i] == 1) {
+                            V[(opcode & 0x0F00) >> 8] =  i;
                             pc+=2;
                             break;
                         }
@@ -268,7 +288,9 @@ void Base8Chip::emulateCycle() {
     //Update timers
     if (delay_timer > 0) --delay_timer;
     if (sound_timer > 0) {
-        if(sound_timer == 1) std::cout << "BEEP!"; //TODO add real sound
+        if(sound_timer == 1){
+            std::cout << "BEEP!";
+        } //TODO add real sound
         --sound_timer;
     }
 }

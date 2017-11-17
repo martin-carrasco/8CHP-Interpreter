@@ -40,12 +40,17 @@ private:
     unsigned char key[16];
 
 public:
+    //Key press checker
+    bool key_pressed = false;
     //Pixel vector
     unsigned char gfx[64 * 32];
 
     //Initialize everything for use
     void init();
 
+    bool drawFlag;
+
+    //Records key input
     //Load game into memory
     void loadGame(string name);
 
@@ -53,31 +58,10 @@ public:
     void emulateCycle();
 
     //Flag that dictates wether something should be drawn
-    bool drawFlag;
+    void setKey(unsigned char addr, char state);
 
-    //Records key input
-    void setKey(const unsigned char addr, const char state);
+    unsigned char* getKeys();
 
-    //Fonts map
-    unsigned char const chip8_fontset[80] =
-            {
-                    0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
-                    0x20, 0x60, 0x20, 0x20, 0x70, // 1
-                    0xF0, 0x10, 0xF0, 0x80, 0xF0, // 2
-                    0xF0, 0x10, 0xF0, 0x10, 0xF0, // 3
-                    0x90, 0x90, 0xF0, 0x10, 0x10, // 4
-                    0xF0, 0x80, 0xF0, 0x10, 0xF0, // 5
-                    0xF0, 0x80, 0xF0, 0x90, 0xF0, // 6
-                    0xF0, 0x10, 0x20, 0x40, 0x40, // 7
-                    0xF0, 0x90, 0xF0, 0x90, 0xF0, // 8
-                    0xF0, 0x90, 0xF0, 0x10, 0xF0, // 9
-                    0xF0, 0x90, 0xF0, 0x90, 0x90, // A
-                    0xE0, 0x90, 0xE0, 0x90, 0xE0, // B
-                    0xF0, 0x80, 0x80, 0x80, 0xF0, // C
-                    0xE0, 0x90, 0x90, 0x90, 0xE0, // D
-                    0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
-                    0xF0, 0x80, 0xF0, 0x80, 0x80  // F
-            };
 };
 
 
