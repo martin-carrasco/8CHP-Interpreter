@@ -61,15 +61,18 @@ void Base8Chip::emulateCycle() {
     //Decode opcode and exec
     switch (opcode & 0xF000)
     {
-        //Clear CLS
+        
         case 0x0000:
             switch(opcode & 0x000F)
             {
+                 //CLS : Clear screen
                 case 0x0000:
                     fill(gfx, gfx+(32*64), 0);
                     drawFlag = true;
                     pc+=2;
                     break;
+                            
+                //RET : return from current subrutine
                 case 0x000E:
                     --sp;
                     pc=stack[sp];
@@ -77,59 +80,79 @@ void Base8Chip::emulateCycle() {
                     break;
             }
             break;
+        //JP : Goto subroutine
         case 0x1000:
             pc = 0x0FFF & opcode;
             break;
+                    
+        //CALL : Call subroutine at address
         case 0x2000:
             stack[sp] = pc;
             ++sp;
             pc = 0x0FFF & opcode;
             break;
+                    
+        //SE : Skip next if ==
         case 0x3000:
             if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
-                pc+=4;
-            else
                 pc+=2;
+            pc+=2;
             break;
+                    
+        //SNE : Skip next if !=
         case 0x4000:
             if(V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
-                pc+=4;
-            else
                 pc+=2;
+            pc+=2;
             break;
+                    
+        //SE : Skip next if Vx = Vy
         case 0x5000:
             if(V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x00F0) >> 4])
-                pc+=4;
-            else
                 pc+=2;
+            pc+=2;
             break;
+                    
+        //LD : 0x0yxx Puts xx en Vy
         case 0x6000:
             V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
             pc+=2;
             break;
+                    
+        //ADD : 0x0yxx Vx+=y
         case 0x7000:
             V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
             pc+=2;
             break;
+                    
         case 0x8000:
             switch(opcode & 0x000F)
             {
+                //LD : 0x0xy0 Vx = Vy
                 case 0x0000:
                     V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4];
                     pc+=2;
                     break;
+                            
+                //OR : Vx = Vx | Vy
                 case 0x0001:
                     V[(opcode & 0x0F00) >> 8] |= V[(opcode & 0x00F0) >> 4];
                     pc+=2;
                     break;
+                            
+                //AND : Vx = Vx & Vy
                 case 0x0002:
                     V[(opcode & 0x0F00) >> 8] &= V[(opcode & 0x00F0) >> 4];
                     pc+=2;
                     break;
+                            
+                //XOR : Vx = Vx ^ Vy
                 case 0x0003:
                     V[(opcode & 0x0F00) >> 8] ^= V[(opcode & 0x00F0) >> 4];
                     pc+=2;
                     break;
+                            
+                //ADD : Vx = Vx + Vy (carry)           
                 case 0004:
                     if(V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8]))
                         V[0xF] = 1;
