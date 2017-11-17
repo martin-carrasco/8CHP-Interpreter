@@ -28,6 +28,19 @@ unsigned char const chip8_fontset[80] =
                 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                 0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
+unsigned char const schip8_fontset[16*16] = 
+{
+        0x3C, 0x7E, 0xE7, 0xC3, 0xC3, 0xC3, 0xC3, 0xE7, 0x7E, 0x3C, // "0"
+        0x18, 0x38, 0x58, 0x18, 0x18, 0x18, 0x18, 0x18, 0x18, 0x3C, // "1"
+        0x3E, 0x7F, 0xC3, 0x06, 0x0C, 0x18, 0x30, 0x60, 0xFF, 0xFF, // "2"
+        0x3C, 0x7E, 0xC3, 0x03, 0x0E, 0x0E, 0x03, 0xC3, 0x7E, 0x3C, // "3"
+        0x06, 0x0E, 0x1E, 0x36, 0x66, 0xC6, 0xFF, 0xFF, 0x06, 0x06, // "4"
+        0xFF, 0xFF, 0xC0, 0xC0, 0xFC, 0xFE, 0x03, 0xC3, 0x7E, 0x3C, // "5"
+        0x3E, 0x7C, 0xC0, 0xC0, 0xFC, 0xFE, 0xC3, 0xC3, 0x7E, 0x3C, // "6"
+        0xFF, 0xFF, 0x03, 0x06, 0x0C, 0x18, 0x30, 0x60, 0x60, 0x60, // "7"
+        0x3C, 0x7E, 0xC3, 0xC3, 0x7E, 0x7E, 0xC3, 0xC3, 0x7E, 0x3C, // "8"
+        0x3C, 0x7E, 0xC3, 0xC3, 0x7F, 0x3F, 0x03, 0x03, 0x3E, 0x7C  // "9"
+}
 
 void Base8Chip::init() {
 
@@ -42,6 +55,7 @@ void Base8Chip::init() {
     delay_timer = 0;
 
     //Zeroes the memory
+    fill(gfx_e, gfx_e + (128*64), 0);
     fill(key, key+16, 0);
     fill(stack, stack+16, 0);
     fill(V, V+16, 0);
@@ -61,10 +75,32 @@ void Base8Chip::emulateCycle() {
     //Decode opcode and exec
     switch (opcode & 0xF000)
     {
-        
         case 0x0000:
+			switch(opcode & 0x00F0)
+			{
+				//Scroll display N lines
+				case 0x00C0:
+					unsigned char lines = opcode & 0x000F;
+					breaK;
+			}
             switch(opcode & 0x000F)
             {
+				//Scroll 4 pixels to the right
+                case 0x000B:
+                    break;
+				//Scroll 4 pixels to the left
+                case 0x000C:
+                    break;
+				//Exit interprete
+                case 0x000D:
+                     break;
+				//Enable extended screen
+                case 0x000E:
+                     break;
+				//Disable extended screen
+                case 0x000F:
+                     break;
+					
                  //CLS : Clear screen
                 case 0x0000:
                     fill(gfx, gfx+(32*64), 0);
@@ -89,7 +125,7 @@ void Base8Chip::emulateCycle() {
         case 0x2000:
             stack[sp] = pc;
             ++sp;
-            pc = 0x0FFF & opcode;
+            pc = 0x0FFF & opcode
             break;
                     
         //SE : Skip next if ==
@@ -209,6 +245,9 @@ void Base8Chip::emulateCycle() {
             pc+=2;
             break;
         case 0xD000: {
+			if(opcode & 0x000F == 0 && is_extended){
+				//16bit sprites
+			}
             unsigned short x = V[(opcode & 0x0F00) >> 8];
             unsigned short y = V[(opcode & 0x00F0) >> 4];
             unsigned short h = opcode & 0x000F;
@@ -281,6 +320,10 @@ void Base8Chip::emulateCycle() {
                     I = V[(opcode & 0x0F00) >> 8] * 0x5;
                     pc += 2;
                     break;
+				case 0x0030:
+					I = V[(opcode & 0F00) >> 8) * 0x10;
+					pc += 2;
+					break;
                 case 0x0033:
                     memory[I]     = V[(opcode & 0x0F00) >> 8] / 100;
                     memory[I + 1] = (V[(opcode & 0x0F00) >> 8] / 10) % 10;
