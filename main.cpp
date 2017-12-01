@@ -3,45 +3,93 @@
 #include <SDL2/SDL.h>
 #include <assert.h>
 #include <time.h>
+#include <thread>
 
-#define SCREEN_WIDTH  640
-#define SCREEN_HEIGHT 320
+#define INFO_SCREEN_HEIGHT 320
+
+#define GAME_SCREEN_WIDTH  640
+#define GAME_SCREEN_HEIGHT 320
+
+
 #define AUGMENTOR 10
 
 SDL_Window* window = NULL;
 SDL_Event e;
 SDL_Renderer* render = NULL;
+SDL_Texture* texture = NULL;
 bool quit = false;
 
 void setupGraphics() {
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) < 0) cout << "Error initializing SDL";
     window = SDL_CreateWindow("Chip8 - Emulator", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-                              SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN);
+                              GAME_SCREEN_WIDTH, GAME_SCREEN_HEIGHT/* + INFO_SCREEN_HEIGHT*/, SDL_WINDOW_SHOWN);
     assert(window != NULL);
 
     render = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    texture = SDL_CreateTexture( render, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_TARGET, GAME_SCREEN_WIDTH, GAME_SCREEN_HEIGHT);
 
+    assert(texture != NULL);
     assert(render != NULL);
 
 }
+void draw_mem(char* mem, unsigned short pc){
+    //Limpia el cuadrado de informacion
+    SDL_SetRenderDrawColor(render, 0, 0, 0, 0);
+    SDL_Rect rec;
+    rec.x = GAME_SCREEN_HEIGHT + 16;
+    rec.y = 16;
+    rec.w = GAME_SCREEN_WIDTH - 32;
+    rec.h = INFO_SCREEN_HEIGHT - 32;
+
+    SDL_RenderDrawRect(render, &rec);
+
+    for(int x = pc-10;x < pc+11;x++){
+    }
+
+
+    //Imprime 10 locaciones en la memoria, la actual y diez locaciones despues
+    for(int h = GAME_SCREEN_HEIGHT + 16;h < GAME_SCREEN_HEIGHT+INFO_SCREEN_HEIGHT-16;h++){
+        for(int w = 16;w < GAME_SCREEN_WIDTH - 16;w++){
+
+        }
+    }
+
+    unsigned short opcode = mem[pc] << 8 | mem[pc + 1];
+
+}
+void draw_frame(){
+    SDL_SetRenderDrawColor(render, 0, 0, 0, 0);
+    SDL_RenderClear(render);
+    SDL_SetRenderDrawColor(render, 255,255,255,255);
+    for(int h = GAME_SCREEN_HEIGHT; h < INFO_SCREEN_HEIGHT + GAME_SCREEN_HEIGHT;h++){
+        for(int w = 0;w < GAME_SCREEN_WIDTH;w++){
+            if(h < (GAME_SCREEN_HEIGHT + 15) || GAME_SCREEN_HEIGHT+INFO_SCREEN_HEIGHT-h < 15)
+                SDL_RenderDrawPoint(render, w, h);
+            if(w < 15 || GAME_SCREEN_WIDTH - w < 15)
+                SDL_RenderDrawPoint(render, w, h);
+        }
+    }
+    SDL_RenderPresent(render);
+}
 void drawGraphics(unsigned char vec[]){
+
+    //Draws graphics on the texture, swaps the render target copies the texture to the render and presents it
+    SDL_SetRenderTarget(render, texture);
 
     SDL_SetRenderDrawColor(render, 0, 0, 0, 0);
     SDL_RenderClear(render);
 
-
-    SDL_SetRenderDrawColor(render, 255,255,255,255);
-
-    for(int w = 0;w < SCREEN_HEIGHT;w++){
-        for(int h = 0;h < SCREEN_WIDTH;h++){
+    SDL_SetRenderDrawColor(render, 255, 255, 255, 255);
+    for(int w = 0;w < GAME_SCREEN_HEIGHT;w++){
+        for(int h = 0;h < GAME_SCREEN_WIDTH;h++){
             if(vec[ ( ( w / AUGMENTOR) * 64) + (h / AUGMENTOR)] == 1) {
                 assert(SDL_RenderDrawPoint(render, h, w) == 0);
             }
         }
     }
-    
+    SDL_SetRenderTarget(render, NULL);
+    SDL_RenderCopy(render, texture, NULL, NULL);
     SDL_RenderPresent(render);
-
 }
 void close_SDL(){
     SDL_DestroyRenderer(render);
@@ -49,36 +97,14 @@ void close_SDL(){
     SDL_Quit();
 }
 
-bool update_keys(const Uint8* state, Base8Chip &chip){
-    chip.setKey(0x1, state[SDL_SCANCODE_1]);
-    chip.setKey(0x2, state[SDL_SCANCODE_2]);
-    chip.setKey(0x3, state[SDL_SCANCODE_3]);
-    chip.setKey(0xC, state[SDL_SCANCODE_4]);
-
-    chip.setKey(0x4, state[SDL_SCANCODE_Q]);
-    chip.setKey(0x5, state[SDL_SCANCODE_W]);
-    chip.setKey(0x6, state[SDL_SCANCODE_E]);
-    chip.setKey(0xD, state[SDL_SCANCODE_R]);
-
-    chip.setKey(0x7, state[SDL_SCANCODE_A]);
-    chip.setKey(0x8, state[SDL_SCANCODE_S]);
-    chip.setKey(0x9, state[SDL_SCANCODE_D]);
-    chip.setKey(0xE, state[SDL_SCANCODE_F]);
-
-    chip.setKey(0xA, state[SDL_SCANCODE_Z]);
-    chip.setKey(0x0, state[SDL_SCANCODE_X]);
-    chip.setKey(0xB, state[SDL_SCANCODE_C]);
-    chip.setKey(0xF, state[SDL_SCANCODE_V]);
-
-    if(state[SDL_SCANCODE_ESCAPE])
-        return false;
-    return true;
-}
-
-void get_key_down(Base8Chip &chip) {
-    while (SDL_PollEvent(&e)) {
-        if (e.type == SDL_KEYDOWN) {
-            switch (e.key.keysym.sym) {
+bool handle_input(Base8Chip& chip, SDL_Event& event){
+    switch (event.type)
+    {
+        case SDL_QUIT:
+            return false;
+        case SDL_KEYDOWN:
+            switch(event.key.keysym.sym)
+            {
                 case SDLK_1:
                     chip.setKey(0x1, 1);
                     break;
@@ -130,19 +156,11 @@ void get_key_down(Base8Chip &chip) {
                 case SDLK_v:
                     chip.setKey(0xF, 1);
                     break;
-
-                case SDL_QUIT:
-                    quit = true;
-                    break;
             }
-        }
-    }
-}
-void get_key_up(Base8Chip &chip){
-    while(SDL_PollEvent(&e)){
-
-        if(e.type == SDL_KEYUP) {
-            switch (e.key.keysym.sym) {
+            break;
+        case SDL_KEYUP:
+            switch(event.key.keysym.sym)
+            {
                 case SDLK_1:
                     chip.setKey(0x1, 0);
                     break;
@@ -194,10 +212,10 @@ void get_key_up(Base8Chip &chip){
                 case SDLK_v:
                     chip.setKey(0xF, 0);
                     break;
-
             }
-        }
+            break;
     }
+    return true;
 }
 
 int main(int argc, char* argv[]) {
@@ -212,23 +230,36 @@ int main(int argc, char* argv[]) {
     // Initialize the Chip8 system and load the game into the memory
     chip.init();
     chip.loadGame(argv[1]);
+    //draw_frame();
+    SDL_Event event;
 
     // Emulation loop
     while(!quit)
     {
-        SDL_PumpEvents();
-        const Uint8 *state = SDL_GetKeyboardState(NULL);
-
-        if(!update_keys(state, chip))
-            break;
 
         chip.emulateCycle();
 
-        // If the draw flag is set update the screen
+        //Gets memory to print out locations
+        //char* mem = new char[4096];
+        //chip.get_mem(mem);
+
+        //unsigned short pc = chip.get_pc();
+
+        //Dibuja la posicion actual de la memoria
+        //draw_mem(mem, pc);
+
+
+        // / If the draw flag is set update the screen
         if(chip.drawFlag) {
             drawGraphics(chip.gfx);
             chip.drawFlag = false;
         }
+
+        SDL_PollEvent(&event);
+
+        if(!handle_input(chip, event))
+            break;
+
     }
     //cout << "Freeing SDL memory";
     close_SDL();

@@ -40,8 +40,12 @@ private:
     unsigned char key[16];
 
 public:
-    //Key press checker
-    bool key_pressed = false;
+    //Retorna el opcode actual
+    unsigned short get_pc();
+
+    //Returns a copy of the memory
+    void get_mem(char* receive);
+
     //Pixel vector
     unsigned char gfx[64 * 32];
 
@@ -54,7 +58,7 @@ public:
     //Load game into memory
     void loadGame(string name);
 
-    //Emulates 1 cyle (60 cycles per second)
+    //Emulates 1 cyle
     void emulateCycle();
 
     //Flag that dictates wether something should be drawn

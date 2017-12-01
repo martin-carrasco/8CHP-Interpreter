@@ -7,6 +7,7 @@
 #include <fstream>
 #include <vector>
 #include <assert.h>
+#include <cstring>
 #include "Base8Chip.h"
 
 unsigned char const chip8_fontset[80] =
@@ -28,7 +29,14 @@ unsigned char const chip8_fontset[80] =
                 0xF0, 0x80, 0xF0, 0x80, 0xF0, // E
                 0xF0, 0x80, 0xF0, 0x80, 0x80  // F
         };
-
+unsigned short Base8Chip::get_pc(){
+    return pc;
+}
+void Base8Chip::get_mem(char* receive) {
+    for(int x = 0;x < 4096;x++){
+        receive[x] = memory[x];
+    }
+}
 void Base8Chip::init() {
 
     //inits
@@ -59,123 +67,123 @@ void Base8Chip::emulateCycle() {
     opcode = memory[pc] << 8 | memory[pc + 1];
 
     //Decode opcode and exec
-    switch (opcode & 0xF000)
-    {
-        
+    switch (opcode & 0xF000) {
+
         case 0x0000:
-            switch(opcode & 0x000F)
-            {
-                 //CLS : Clear screen
+            switch (opcode & 0x000F) {
+                //CLS : Clear screen
                 case 0x0000:
-                    fill(gfx, gfx+(32*64), 0);
+                    fill(gfx, gfx + (32 * 64), 0);
                     drawFlag = true;
-                    pc+=2;
+                    pc += 2;
                     break;
-                            
-                //RET : return from current subrutine
+
+                    //RET : return from current subrutine
                 case 0x000E:
                     --sp;
-                    pc=stack[sp];
+                    pc = stack[sp];
                     pc += 2;
                     break;
             }
             break;
-        //JP : Goto subroutine
+
+            //JP : Goto subroutine
         case 0x1000:
-            pc = 0x0FFF & opcode;
+            pc = opcode & 0x0FFF;
             break;
-                    
-        //CALL : Call subroutine at address
+
+            //CALL : Call subroutine at address
         case 0x2000:
             stack[sp] = pc;
             ++sp;
-            pc = 0x0FFF & opcode;
+            pc = opcode & 0x0FFF;
             break;
-                    
-        //SE : Skip next if ==
+
+            //SE : Skip next if ==
         case 0x3000:
-            if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
-                pc+=2;
-            pc+=2;
+            if (V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                pc += 2;
+            pc += 2;
             break;
-                    
-        //SNE : Skip next if !=
+
+            //SNE : Skip next if !=
         case 0x4000:
-            if(V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
-                pc+=2;
-            pc+=2;
+            if (V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                pc += 2;
+            pc += 2;
             break;
-                    
-        //SE : Skip next if Vx = Vy
+
+            //SE : Skip next if Vx = Vy
         case 0x5000:
-            if(V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x00F0) >> 4])
-                pc+=2;
-            pc+=2;
+            if (V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x00F0) >> 4])
+                pc += 2;
+            pc += 2;
             break;
-                    
-        //LD : 0x0yxx Puts xx en Vy
+
+            //LD : 0x0yxx Puts xx en Vy
         case 0x6000:
             V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
-            pc+=2;
+            pc += 2;
             break;
-                    
-        //ADD : 0x0yxx Vx+=y
+
+            //ADD : 0x0yxx Vx+=y
         case 0x7000:
             V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
-            pc+=2;
+            pc += 2;
             break;
-                    
+
         case 0x8000:
-            switch(opcode & 0x000F)
-            {
+            switch (opcode & 0x000F) {
                 //LD : 0x0xy0 Vx = Vy
                 case 0x0000:
                     V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4];
-                    pc+=2;
+                    pc += 2;
                     break;
-                            
-                //OR : Vx = Vx | Vy
+
+                    //OR : Vx = Vx | Vy
                 case 0x0001:
                     V[(opcode & 0x0F00) >> 8] |= V[(opcode & 0x00F0) >> 4];
-                    pc+=2;
+                    pc += 2;
                     break;
-                            
-                //AND : Vx = Vx & Vy
+
+                    //AND : Vx = Vx & Vy
                 case 0x0002:
                     V[(opcode & 0x0F00) >> 8] &= V[(opcode & 0x00F0) >> 4];
-                    pc+=2;
+                    pc += 2;
                     break;
-                            
-                //XOR : Vx = Vx ^ Vy
+
+                    //XOR : Vx = Vx ^ Vy
                 case 0x0003:
                     V[(opcode & 0x0F00) >> 8] ^= V[(opcode & 0x00F0) >> 4];
-                    pc+=2;
+                    pc += 2;
                     break;
-                            
-                //ADD : Vx = Vx + Vy (carry)           
+
+                    //ADD : Vx = Vx + Vy (carry)
                 case 0004:
-                    if(V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8]))
+                    if (V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8]))
                         V[0xF] = 1;
                     else
                         V[0xF] = 0;
                     V[(opcode & 0x0F00) >> 8] += V[(opcode & 0x00F0) >> 4];
                     pc += 2;
                     break;
+
                 case 0x0005:
-                    if(V[(opcode & 0x00F0) >> 8] > V[(opcode & 0x0F00) >> 8])
+                    if (V[(opcode & 0x00F0) >> 4] > V[(opcode & 0x0F00) >> 8])
                         V[0xF] = 0;
                     else
                         V[0xF] = 1;
                     V[(opcode & 0x0F00) >> 8] -= V[(opcode & 0x00F0) >> 4];
-                    pc+=2;
+                    pc += 2;
                     break;
-                case 0x0006: {
-                    V[0xF] = 1 & V[(opcode & 0x0F00) >> 8];
+
+                case 0x0006:
+                    V[0xF] = V[(opcode & 0x0F00) >> 8] & 0x1;
                     V[(opcode & 0x0F00) >> 8] >>= 1;
                     pc += 2;
                     break;
-                }
-                case 0x0007: {
+
+                case 0x0007:
                     if (V[(opcode & 0x0F00) >> 8] > V[(opcode & 0x00F0) >> 4])
                         V[0xF] = 0;
                     else
@@ -183,32 +191,36 @@ void Base8Chip::emulateCycle() {
                     V[(opcode & 0x0F00) >> 8] = (V[(opcode & 0x00F0) >> 4] - V[(opcode & 0x0F00) >> 8]);
                     pc += 2;
                     break;
-                }
+
                 case 0x000E:
                     V[0xF] = V[(opcode & 0x0F00) >> 8] >> 7;
                     V[(opcode & 0x0F00) >> 8] <<= 1;
-                    pc+=2;
+                    pc += 2;
                     break;
             }
             break;
         case 0x9000:
-            if(V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
-                pc+=4;
-            else
-                pc+=2;
+            if (V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
+                pc += 2;
+            pc += 2;
             break;
+
         case 0xA000:
             I = opcode & 0x0FFF;
             pc += 2;
             break;
+
         case 0xB000:
-            pc = V[0] + (opcode & 0x0FFF);
+            pc = (opcode & 0x0FFF) + V[0];
             break;
+
         case 0xC000:
-            V[(opcode & 0x0F00) >> 8] = (rand() % 256) & (opcode & 0x00FF);
-            pc+=2;
+            V[(opcode & 0x0F00) >> 8] = (rand() % 0xFF) & (opcode & 0x00FF);
+            pc += 2;
             break;
+
         case 0xD000: {
+
             unsigned short x = V[(opcode & 0x0F00) >> 8];
             unsigned short y = V[(opcode & 0x00F0) >> 4];
             unsigned short h = opcode & 0x000F;
@@ -227,16 +239,18 @@ void Base8Chip::emulateCycle() {
             }
             drawFlag = true;
             pc += 2;
-            break;
-        }
+        }break;
+
         case 0xE000:
             switch (opcode & 0x00FF)
             {
                 case 0x009E:
-                    if (key[V[(opcode & 0x0F00) >> 8]] == 1)
+                    if (key[V[(opcode & 0x0F00) >> 8]] != 0)
                         pc += 4;
                     else
                         pc += 2;
+                    break;
+
                 case 0x00A1:
                     if (key[V[(opcode & 0x0F00) >> 8]] == 0)
                         pc += 4;
@@ -249,32 +263,38 @@ void Base8Chip::emulateCycle() {
             switch(opcode & 0x00FF)
             {
                 case 0x0007:
-                    V[opcode & 0x0F00 >> 8] = delay_timer;
+                    V[(opcode & 0x0F00) >> 8] = delay_timer;
                     pc+=2;
                     break;
+
                 case 0x000A:
-                    for(int i = 0;i < 16;i++){
-                        if(key[i] == 1) {
-                            V[(opcode & 0x0F00) >> 8] =  i;
-                            pc+=2;
-                            break;
+                {
+                    bool is_pressed = false;
+                    for (int i = 0; i < 16; i++) {
+                        if (key[i] == 1) {
+                            V[(opcode & 0x0F00) >> 8] = i;
+                            is_pressed = true;
                         }
                     }
-                    return;
+                    if (!is_pressed)
+                        return;
+                    pc += 2;
+                }break;
+
                 case 0x0015:
-                    delay_timer = V[opcode & 0x0F00 >> 8];
-                    pc+=2;
+                    delay_timer = V[(opcode & 0x0F00) >> 8];
+                    pc += 2;
                     break;
                 case 0x0018:
-                    sound_timer = V[opcode & 0x0F00 >> 8];
+                    sound_timer = V[(opcode & 0x0F00) >> 8];
                     pc+=2;
                     break;
                 case 0x001E:
-                    if(I + V[opcode & 0x0F00 >> 8 ] > 0xFFF)
+                    if(I + V[(opcode & 0x0F00) >> 8 ] > 0xFFF)
                         V[0xF] = 1;
                     else
                         V[0xF] = 0;
-                    I += V[opcode & 0x0F00 >> 8];
+                    I += V[(opcode & 0x0F00) >> 8];
                     pc+=2;
                     break;
                 case 0x0029:
@@ -282,20 +302,20 @@ void Base8Chip::emulateCycle() {
                     pc += 2;
                     break;
                 case 0x0033:
-                    memory[I]     = V[(opcode & 0x0F00) >> 8] / 100;
+                    memory[I] = V[(opcode & 0x0F00) >> 8] / 100;
                     memory[I + 1] = (V[(opcode & 0x0F00) >> 8] / 10) % 10;
                     memory[I + 2] = (V[(opcode & 0x0F00) >> 8] % 100) % 10;
                     pc += 2;
                     break;
                 case 0x0055:
-                    for(int x = 0;x < ((opcode & 0x0F00) >> 8);x++){
+                    for(int x = 0;x < ((opcode & 0x0F00) >> 8);++x){
                         memory[I+x] = V[x];
                     }
                     I += ((opcode & 0x0F00) >> 8) +1;
                     pc+=2;
                     break;
                 case 0x0065:
-                    for(int x = 0; x <= ((opcode & 0x0F00) >> 8);x++){
+                    for(int x = 0; x <= ((opcode & 0x0F00) >> 8);++x){
                         V[x] = memory[I + x];
                     }
                     I += ((opcode & 0x0F00) >> 8) +1;
@@ -309,16 +329,20 @@ void Base8Chip::emulateCycle() {
     }
 
     //Update timers
-    if (delay_timer > 0) --delay_timer;
+    if (delay_timer > 0)
+        --delay_timer;
     if (sound_timer > 0) {
         if(sound_timer == 1){
             std::cout << "BEEP!";
         } //TODO add real sound
-        --sound_timer;
+        else {
+            --sound_timer;
+        }
     }
 }
 
 void Base8Chip::loadGame(string name) {
+
     ifstream file(name, ios::binary | ios::ate);
     streamsize size = file.tellg();
 
